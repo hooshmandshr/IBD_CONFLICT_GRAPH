@@ -1,38 +1,37 @@
 
-
-#include <iostream>
-#include <cstdlib>
-#include <vector>
-#include <string>
-
-#include "./dynamic_bitset.hpp"
-
-using namespace std;
-using namespace boost;
-
-
 #ifndef GENOME_H
 #define GENOME_H
 
-using namespace std;
-using namespace boost; 
+#include <iostream>
+#include <vector>
+#include <cstdlib>
 
-class genome_matrix{
+using namespace std;
+
+
+class genome_matrix
+{
 
 private:
-	dynamic_bitset<unsigned short> *** Matrix;
+	vector<vector<char> > Matrix;	
 	int Individuals;
-	int SNP;
+	int Sites;
 public:
-
-	genome_matrix(int, int);
-
+	genome_matrix();
 	~genome_matrix();
 
-	int get_allele(int, int, int);
-	void set_allele(int, int, int, int);	
-	void push_allele(int, int, int);
-};
+	vector<vector<char> > Information;
 
+	void initialize(int individuals, int sites);
+
+	void print();
+	void testprint();
+
+	void set(int individual, int site, char order);
+	char get(int individual, int site);
+
+	int individuals();
+	int sites();
+};
 
 #endif

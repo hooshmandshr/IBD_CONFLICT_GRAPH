@@ -1,77 +1,163 @@
 
 #include <iostream>
-#include <cstdlib>
 #include <vector>
-#include <string>
-
-#include "./dynamic_bitset.hpp"
+#include <cstdlib>
 
 using namespace std;
-using namespace boost;
 
 
-class genome_matrix{
+class genome_matrix
+{
 
 private:
-	dynamic_bitset<unsigned short int> *** Matrix;
+	vector<vector<char> > Matrix;
 
 	int Individuals;
-	int SNP;
+	int Sites;
 public:
-	genome_matrix(int, int);
-
+	genome_matrix();
 	~genome_matrix();
 
-	int get_allele(int, int, int);
-	void set_allele(int, int, int, int);
-	void push_allele(int, int, int);
+	vector<vector<char> > Information;
+
+	void initialize(int individuals, int sites);
+	
+	void testprint();
+
+	void print();
+
+	void set(int individual, int site, char order);
+	char get(int individual, int site);
+
+	int individuals();
+	int sites();
+
 };
 
-
-genome_matrix::genome_matrix(int individuals, int SNPs)
+genome_matrix::genome_matrix()
 {
-	int byte_number = SNPs/16 + 1;
 
-	Individuals = individuals;
-	SNP = SNPs;
-	//dynamic_bitset<unsigned short> ** Matrix;
-	
-	Matrix = new dynamic_bitset<unsigned short int> ** [individuals+1];
-
-	for (int i = 0; i < individuals+1; i++)
-	{
-		Matrix[i] = new dynamic_bitset<unsigned short int> * [2];
-		
-		Matrix[i][0] = new dynamic_bitset<unsigned short int>(byte_number, 8);
-		Matrix[i][1] = new dynamic_bitset<unsigned short int>(byte_number, 8);
-	}
- 
 }
-
 
 genome_matrix::~genome_matrix()
 {
-/*
-	for (int i = 0; i < Individuals+1; i++)
-	{	
-		Matrix[i][0]->clear();
-		Matrix[i][1]->clear();
+
+}
+
+void genome_matrix::set(int individual, int site, char order)
+{
+
+	this->Matrix[individual][site] = order;
+}
+
+char genome_matrix::get(int individual, int site)
+{
+
+	return this->Matrix[individual][site];
+}
+
+void genome_matrix::initialize(int individuals, int sites)
+{
+
+	this->Individuals = individuals;
+	this->Sites = sites;
+
+	for (int i = 0; i < individuals + 1; i++)
+	{
+
+		vector<char> row;
+
+		for (int j = 0; j < sites; j++)
+		{
+
+			row.push_back('0');			
+		}
+
+		this->Matrix.push_back(row);
 	}
-*/
-	delete [] Matrix;
+
+	for (int i = 0; i < individuals + 1; i++)
+	{
+
+		vector<char> info;
+		this->Information.push_back(info);
+	}
+
 }
 
-int genome_matrix::get_allele(int individual, int chromosome, int site)
+void genome_matrix::testprint()
 {
-	return (*Matrix[individual][chromosome])[site];
+
+	for (int i = 0; i < 50; i++)
+	{
+
+		for (int j = 0; j < 70; j++)
+
+		{
+
+			cerr << this->Matrix[i][j] << ' ';
+		}
+
+		cerr << endl;
+	}
 }
 
-void genome_matrix::set_allele(int individual, int chromosome, int site, int allele)
+void genome_matrix::print()
 {
-	(*Matrix[individual][chromosome])[site] = allele % 2;
+
+	for (int i = 1; i < this->Matrix.size(); i++)
+	{
+
+		for (int j = 0; j < this->Information[i].size(); j++)
+		{
+
+			cout << Information[i][j];
+		}
+
+		cout << ' ';
+
+//		for (int j = 0; j < 70; j++)
+		for (int j = 0; j < this->Matrix[i].size(); j++)
+		
+		{
+
+			switch (this->Matrix[i][j])
+			{
+
+				case '0':
+					cout << '1' << ' ' << '1' << ' ';
+					break;
+
+				case '1':
+					cout << '1' << ' ' << '2' << ' ';
+					break;
+
+				case '2':
+					cout << '2' << ' ' << '1' << ' ';
+					break;
+
+				case '3':
+					cout << '2' << ' ' << '2' << ' ';
+					break;
+				default:
+					cout << '1' << ' ' << '2' << ' ';
+					break;
+			}
+		}
+
+		cout << endl;
+	}
+
 }
 
-void genome_matrix::push_allele(int individual, int chromosome, int allele)
+int genome_matrix::individuals()
 {
-	Matrix[individual][chromosome]->push_back(allele);
+	return this->Individuals;
 }
+
+int genome_matrix::sites()
+{
+
+	return this->Sites;
+}
+	

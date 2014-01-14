@@ -6,13 +6,13 @@
 #include <vector>
 #include <map>
 #include <algorithm>
-#include "ibd_segment.hpp" 
-#include "ibd_map.hpp"
+
 #include "genome_matrix.hpp"
+#include "ibd_map.hpp"
 
 using namespace std;
 
-ibd_segment * parse_line(string line)
+void parse_line(string line, int * tuple)
 {
 	int individualOne;
 	int individualTwo;
@@ -54,12 +54,22 @@ ibd_segment * parse_line(string line)
 			
 	}
 
+
+	tuple[0] = individualOne;
+	tuple[1] = individualTwo;
+	tuple[2] = start;
+	tuple[3] = end;
+		
 	if (null_flag)
 	{
-		return NULL;
+		tuple[0] = 0;
+		tuple[1] = 0;
+		tuple[2] = 0;
+		tuple[3] = 0;
+	
 	}
-	ibd_segment * segment = new ibd_segment(individualOne, individualTwo, start, end);
-	return segment;
+	//ibd_segment * segment = new ibd_segment(individualOne, individualTwo, start, end);
+	
 }
 
 
@@ -82,14 +92,23 @@ int length(const char * filename)
 	return line_count;
 }
 
-ibd_map * parse_match(const char * filename)
+void parse_match(const char * filename, ibd_map * match_map)
 {
+
+	//int individual_count;
+	//int snp_count;	
+	//ped_parameters(ped_file, &individual_count, &snp_count);
+
 	string line;
 	int line_count = length(filename);	
 	int count = 0;
-	ibd_map * match_map = new ibd_map(500); 
+	
+	//ibd_map match_map;
+	//match_map.setup(individual_count);
+
 	ifstream match_file(filename);
 
+	int segment[4];
 	cerr << "Parsing " << filename << " ..." << endl;	
 	if (match_file.is_open())
 	{
@@ -98,9 +117,9 @@ ibd_map * parse_match(const char * filename)
 		while (match_file.good())
 		{
 			getline(match_file, line);
-			ibd_segment * segment = parse_line(line);
-			match_map->add(segment);
-			delete segment;
+			parse_line(line, segment);
+			match_map->add(segment[0], segment[1], segment[2], segment[3]);	
+			match_map->add(segment[1], segment[0], segment[2], segment[3]);
 			line.clear();
 			count++;
 			if (count %10000 == 0)
@@ -111,20 +130,8 @@ ibd_map * parse_match(const char * filename)
 		cerr << '\r' << "100%" << " complete." << endl;
 		match_file.close();
 	}	
-	cerr << "Match file fully read." << endl;
+	cerr << "Match file fully read." << endl;	
 
-	vector<unsigned int> *** start_matrix = match_map->end_map(); 
-	vector<unsigned int> *** end_matrix = match_map->start_map();	
-	for (int i = 1; i <= 500; i++)
-	{
-		for (int j = 1; j <= 500; j++)
-		{
-			sort(start_matrix[i][j]->begin(), start_matrix[i][j]->end());	
-			sort(end_matrix[i][j]->begin(), end_matrix[i][j]->end());		
-		}
-	}	 
-	
-	return match_map;
 }
 
 //
@@ -186,42 +193,65 @@ void parse_ped_line(string line, genome_matrix * GM, int individual)
 
 	int site = 0; 
 	int spaceCount = 0;	
+	int genotype;
 	for (int i = 0; i < line.size(); i++)
 	{
 		if (isspace(line[i]))
 		{
 			spaceCount++;
-			continue;	
+			continue;
 		}
 
 		else if (spaceCount > 5)
-		{	
-			//cerr << site << ":" << site/2  << endl;	
-			GM->set_allele(individual, site%2, site/2, (int(line[i])+1)%2);
-			site++;
+		{
+
+			int allele = 0;
+			if (line[i] == '1')
+			{
+				allele = 0;	
+			}
+			else if (line[i] == '2')
+			{
+				allele = 1;
+			}
+
+			if (site%2 == 0)
+			{
+
+				genotype = allele;		
+			}
+			else
+			{
+
+				genotype += (allele * 2);
+				GM->set(individual, site/2, '0' + genotype);
+			}
+			//cerr << site << ":" << site/2  << endl;
+			//
+			site += 1;	
 		}	
 	}
 }
 
-
-genome_matrix * parse_ped(const char * filename)
+void parse_ped(const char * filename, genome_matrix * G)
 {
 	int individual_count;
 	int snp_count;	
 	ped_parameters(filename, &individual_count, &snp_count);
+	G->initialize(individual_count, snp_count);
 
-	genome_matrix * G = new genome_matrix(individual_count, snp_count);
 	ifstream File(filename);
 	string line;
 
 	if (File.is_open())
 	{
 		cerr << '\r' << "0" << "%" << " complete...";		
-		for (int i = 1; i < individual_count+1; i++)
+		for (int i = 1; i < individual_count - 1; i++)
 		{
-			cerr << '\r' << int(i*100/(double(individual_count))) << "%" << " complete...";			
+			cerr << '\r' << int(i*100/(double(individual_count))) << "%" << " complete...";				
 			getline(File, line);
 			parse_ped_line(line, G, i);
+	
 		}
 
 		cerr << '\r' << "100" << "%" << " complete..." << endl;
@@ -233,7 +263,109 @@ genome_matrix * parse_ped(const char * filename)
 		cerr << "Could not open file." << endl;
 	}
 
-	return G;
+}
+
+void parse_ped_genotype_line(string line, genome_matrix * GM, int individual)
+{
+	string word;
+	word.clear();
+
+	int site = 0; 
+	int spaceCount = 0;	
+	int genotype;
+	for (int i = 0; i < line.size(); i++)
+	{
+		if (isspace(line[i]))
+		{
+
+			if (spaceCount <= 5)
+			{
+
+				GM->Information[individual].push_back(line[i]);
+			}
+			spaceCount++;
+			continue;	
+		}
+
+		else if (spaceCount > 5)
+		{
+
+			int allele = 0;
+			if (line[i] == '1')
+			{
+				allele = 0;	
+			}
+			else if (line[i] == '2')
+			{
+				allele = 1;
+			}
+
+			if (site%2 == 0)
+			{
+
+				genotype = allele;		
+			}
+			else
+			{
+
+				genotype += (allele * 2);
+				if (genotype == 1 || genotype == 2)
+				{
+					GM->set(individual, site/2, '-');
+				}
+				else
+				{
+					GM->set(individual, site/2, '0' + genotype);
+				}
+			}
+			//cerr << site << ":" << site/2  << endl;
+			//
+			site += 1;	
+		}
+
+		else
+		{
+			GM->Information[individual].push_back(line[i]);
+		}
+		
+	}
+	
+}
+
+void parse_ped_genotype(const char * filename, genome_matrix * G)
+{
+	int individual_count;
+	int snp_count;	
+	ped_parameters(filename, &individual_count, &snp_count);
+	G->initialize(individual_count, snp_count);
+
+	//genome_matrix * G = new genome_matrix(individual_count, snp_count);
+	
+	//genome_matrix G;
+	//G.initialize(individual_count, snp_count);
+	
+	ifstream File(filename);
+	string line;
+
+	if (File.is_open())
+	{
+		cerr << '\r' << "0" << "%" << " complete...";		
+		for (int i = 1; i < individual_count + 1; i++)
+		{
+			cerr << '\r' << int(i*100/(double(individual_count))) << "%" << " complete...";			
+			getline(File, line);
+			parse_ped_genotype_line(line, G, i);
+		}
+
+		cerr << '\r' << "100" << "%" << " complete..." << endl;
+		cerr << "PED file fully read." << endl;
+		File.close();
+	}
+	else
+	{
+		cerr << "Could not open file." << endl;
+	}
+
 }
 
 
